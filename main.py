@@ -6,9 +6,8 @@ import time
 import argparse
 import pystray
 from PIL import Image
-from src.classifier import classify
+from src.document_parser import extract_text, classify_with_ai
 from src.file_manager import move_and_rename
-from src.document_parser import extract_first_page_text
 from src.watcher import start_watching
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
@@ -39,41 +38,45 @@ def setup_logging(log_file: str):
 
     return logger
 
-# Devuelve la funcion callback que se ejecuta cuando el watcher detecta un PDF nuevo y estable
 def make_processor(config: dict, logger: logging.Logger):
-    def process_pdf(pdf_path: str):
-        logger.info("Nuevo PDF detectado: %s", pdf_path)
+    def process_file(file_path: str):
+        logger.info("Nuevo archivo detectado: %s", file_path)
 
-        text = extract_first_page_text(pdf_path)
+        text = extract_text(file_path)
         if not text.strip():
-            logger.warning(
-                "No se pudo extraer texto (posible PDF escaneado): %s", pdf_path
-            )
+            logger.warning("No se pudo extraer texto: %s", file_path)
 
-        category, destination = classify(
-            text, config["rules"], config["default_destination"]
-        )
+        # Usar la IA para clasificar
+        categories = [rule["category"] for rule in config["rules"]]
+        category = classify_with_ai(text, categories)
+
+        # Buscar carpeta destino
+        destination = config["default_destination"]
+        for rule in config["rules"]:
+            if rule["category"] == category:
+                destination = rule["destination"]
+                break
 
         try:
-            final_path = move_and_rename(pdf_path, destination)
-            logger.info("'%s' clasificado como '%s' -> %s", pdf_path, category, final_path)
+            final_path = move_and_rename(file_path, destination)
+            logger.info("'%s' clasificado como '%s' -> %s", file_path, category, final_path)
         except Exception as exc:
-            logger.error("Error al mover '%s': %s", pdf_path, exc)
+            logger.error("Error al mover '%s': %s", file_path, exc)
 
-    return process_pdf
+    return process_file
 
 def main():
-    parser = argparse.ArgumentParser(description="Smart-DocuSorter: Clasificador automático.")
+    parser = argparse.ArgumentParser(description="Smart-DocuSorter: Clasificador automatico.")
     parser.add_argument(
         "--config", 
         default=CONFIG_PATH, 
-        help="Ruta al archivo de configuración config.json"
+        help="Ruta al archivo de configuracion config.json"
     )
     args = parser.parse_args()
 
     if not os.path.exists(args.config):
-        print(f"Error: No se encontró el archivo de configuración en {args.config}")
-        print("Copia config.example.json como config.json y edítalo.")
+        print(f"Error: No se encontro el archivo de configuracion en {args.config}")
+        print("Copia config.example.json como config.json y editalo.")
         sys.exit(1)
 
     config = load_config(args.config)
@@ -108,6 +111,6 @@ def main():
         
     observer.join()
 
-# Ejecución manual: python main.py --config mi_configuracion.json
+# Ejecucion manual: python main.py --config mi_configuracion.json
 if __name__ == "__main__": 
     main()

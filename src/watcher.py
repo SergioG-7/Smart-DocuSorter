@@ -1,13 +1,5 @@
-"""
-Vigila la carpeta de Descargas usando watchdog (bajo consumo de CPU,
-basado en eventos nativos del sistema de archivos, no polling).
-
-Detalle importante en Windows/Chrome/Edge: el navegador suele escribir
-primero un archivo temporal (.crdownload / .tmp) y, al terminar la
-descarga, lo renombra a .pdf. Por eso escuchamos tanto on_created
-como on_moved, y en ambos casos esperamos a que el tamaño del archivo
-se estabilice antes de procesarlo (evita leer un PDF a medio escribir).
-"""
+# Vigila descargas y eventos del sistema sin consumir mucha CPU
+# Espera a que termine la descarga antes de procesar el archivo
 
 import logging
 import os
@@ -19,22 +11,23 @@ from watchdog.observers import Observer
 logger = logging.getLogger("smart_docusorter")
 
 
-class PDFHandler(FileSystemEventHandler):
-    def __init__(self, on_pdf_ready):
+class DocumentHandler(FileSystemEventHandler):
+    def __init__(self, on_file_ready):
         super().__init__()
-        self.on_pdf_ready = on_pdf_ready
+        self.on_file_ready = on_file_ready
         self._seen = set()
 
     def on_created(self, event):
         self._handle_event(event)
 
     def on_moved(self, event):
-        # dest_path es el nombre final tras el rename (ej. quitar .crdownload)
-        if not event.is_directory and event.dest_path.lower().endswith(".pdf"):
+        # Detecta archivos soportados tras ser renombrados (ej. fin de .crdownload)
+        if not event.is_directory and event.dest_path.lower().endswith((".pdf", ".docx", ".jpg", ".jpeg", ".png")):
             self._process_when_stable(event.dest_path)
 
     def _handle_event(self, event):
-        if event.is_directory or not event.src_path.lower().endswith(".pdf"):
+        # Filtra solo las extensiones que sabemos procesar
+        if event.is_directory or not event.src_path.lower().endswith((".pdf", ".docx", ".jpg", ".jpeg", ".png")):
             return
         self._process_when_stable(event.src_path)
 
@@ -42,23 +35,18 @@ class PDFHandler(FileSystemEventHandler):
         if path in self._seen:
             return
         if not self._wait_until_stable(path):
-            logger.warning("Archivo no estabilizo, se ignora: %s", path)
+            logger.warning("Archivo no estabilizado, se ignora: %s", path)
             return
         self._seen.add(path)
-        self.on_pdf_ready(path)
+        self.on_file_ready(path)
 
     @staticmethod
     def _wait_until_stable(path: str, checks: int = 3, interval: float = 1.0) -> bool:
-        """
-        Espera hasta que el tamaño del archivo no cambie durante
-        'checks' lecturas consecutivas separadas por 'interval'
-        segundos. Devuelve False si el archivo desaparece o si tras
-        un numero razonable de intentos sigue cambiando de tamaño.
-        """
+        # Comprueba que el archivo deje de cambiar de tamaño durante 3 segundos
         stable_count = 0
         last_size = -1
         attempts = 0
-        max_attempts = 30  # ~30s de margen para descargas grandes
+        max_attempts = 30  # Margen de 30 segundos para descargas lentas
 
         while stable_count < checks and attempts < max_attempts:
             if not os.path.exists(path):
@@ -80,13 +68,10 @@ class PDFHandler(FileSystemEventHandler):
         return stable_count >= checks
 
 
-def start_watching(folder: str, on_pdf_ready) -> Observer:
-    """
-    Lanza el Observer de watchdog sobre 'folder' y lo devuelve para
-    que el llamador controle su ciclo de vida (join/stop).
-    """
+def start_watching(folder: str, on_file_ready) -> Observer:
+    # Lanza el monitor en la carpeta configurada
     os.makedirs(folder, exist_ok=True)
-    handler = PDFHandler(on_pdf_ready)
+    handler = DocumentHandler(on_file_ready)
     observer = Observer()
     observer.schedule(handler, folder, recursive=False)
     observer.start()

@@ -3,24 +3,20 @@ import docx
 import pytesseract
 from PIL import Image
 import pdfplumber
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Configuración de IA y OCR
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-1.5-flash')
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 def extract_text(file_path: str) -> str:
     ext = file_path.lower().split(".")[-1]
     text = ""
-
     try:
         if ext == "pdf":
             with pdfplumber.open(file_path) as pdf:
-                # Extrae solo la primera página
                 text = pdf.pages[0].extract_text() or ""
         elif ext == "docx":
             doc = docx.Document(file_path)
@@ -37,13 +33,16 @@ def classify_with_ai(text: str, categories: list) -> str:
         return "Sin_Clasificar"
         
     prompt = (
-        f"Clasifica este texto en UNA sola de estas categorias: {categories}. "
-        "Devuelve SOLO el nombre exacto de la categoria. "
-        f"Texto: {text[:1500]}"
+        f"Actua como un clasificador de texto estricto. Lee el siguiente fragmento "
+        f"y responde unicamente con el nombre de la categoria a la que pertenece: {categories}. "
+        "Si el texto no encaja claramente con ninguna categoria de la lista, responde exactamente: Sin_Clasificar. "
+        "No agregues introducciones ni explicaciones. "
+        f"Texto a clasificar: {text[:1500]}"
     )
     
     try:
-        response = model.generate_content(prompt)
+        chat = client.chats.create(model='gemini-3.6-flash')
+        response = chat.send_message(prompt)
         return response.text.strip()
     except Exception as exc:
         print(f"Error con la IA: {exc}")
