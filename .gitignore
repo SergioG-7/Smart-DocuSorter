@@ -25,3 +25,4 @@ Thumbs.db
 
 # Tu configuración local (¡Muy importante!)
 config.json
+/.env
