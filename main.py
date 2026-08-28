@@ -39,12 +39,9 @@ def setup_logging(log_file: str):
 
     return logger
 
-
+#Devuelve la funcion callback que se ejecuta cada vez que el watcher detecta un PDF nuevo y estable.
 def make_processor(config: dict, logger: logging.Logger):
-    """
-    Devuelve la funcion callback que se ejecuta cada vez que el
-    watcher detecta un PDF nuevo y estable.
-    """
+
 
     def process_pdf(pdf_path: str):
         logger.info("Nuevo PDF detectado: %s", pdf_path)
@@ -98,6 +95,6 @@ def main():
     observer.join()
 
 
-"""python main.py --config mi_configuracion.json"""
+#python main.py --config mi_configuracion.json
 if __name__ == "__main__": 
     main()

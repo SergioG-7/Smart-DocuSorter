@@ -1,9 +1,3 @@
-"""
-classifier.py
-Normaliza el texto extraido y lo cruza contra las reglas de config.json
-para determinar la categoria y carpeta destino.
-"""
-
 import logging
 import unicodedata
 import re

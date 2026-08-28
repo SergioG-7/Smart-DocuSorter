@@ -1,5 +1,4 @@
 """
-watcher.py
 Vigila la carpeta de Descargas usando watchdog (bajo consumo de CPU,
 basado en eventos nativos del sistema de archivos, no polling).
 
@@ -22,10 +21,6 @@ logger = logging.getLogger("smart_docusorter")
 
 class PDFHandler(FileSystemEventHandler):
     def __init__(self, on_pdf_ready):
-        """
-        on_pdf_ready: callback(path: str) que se invoca cuando un PDF
-        nuevo terminó de escribirse en disco.
-        """
         super().__init__()
         self.on_pdf_ready = on_pdf_ready
         self._seen = set()

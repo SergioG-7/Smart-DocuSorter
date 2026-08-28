@@ -1,9 +1,3 @@
-"""
-file_manager.py
-Renombra el PDF con el prefijo de fecha YYYY-MM y lo mueve a su
-carpeta de destino final.
-"""
-
 import logging
 import os
 import shutil

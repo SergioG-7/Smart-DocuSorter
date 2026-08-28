@@ -1,15 +1,4 @@
-"""
-pdf_parser.py
-Extrae el texto de la primera pagina de un PDF.
-
-Uso pdfplumber en vez de PyPDF2 porque su extraccion de texto es mas
-fiable en PDFs con layouts complejos (tablas, columnas). Si el PDF esta
-escaneado (imagen sin capa de texto), esto devolvera cadena vacia; no
-hay OCR aqui.
-"""
-
 import logging
-
 import pdfplumber
 
 logger = logging.getLogger("smart_docusorter")
