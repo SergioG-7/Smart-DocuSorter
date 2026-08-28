@@ -1,17 +1,9 @@
-"""
-main.py
-Punto de entrada de Smart-DocuSorter.
-
-En Windows esto NO es un daemon unix; corre como proceso en primer
-plano (o en background con pythonw.exe / Task Scheduler, ver README).
-"""
-
 import json
 import logging
 import os
 import sys
 import time
-
+import argparse
 from src.classifier import classify
 from src.file_manager import move_and_rename
 from src.pdf_parser import extract_first_page_text
@@ -77,7 +69,20 @@ def make_processor(config: dict, logger: logging.Logger):
 
 
 def main():
-    config = load_config()
+    parser = argparse.ArgumentParser(description="Smart-DocuSorter: Clasificador automático de PDFs.")
+    parser.add_argument(
+        "--config", 
+        default=CONFIG_PATH, 
+        help="Ruta al archivo de configuración config.json"
+    )
+    args = parser.parse_args()
+
+    if not os.path.exists(args.config):
+        print(f"Error: No se encontró el archivo de configuración en {args.config}")
+        print("Por favor, copia config.example.json como config.json y edítalo.")
+        sys.exit(1)
+
+    config = load_config(args.config)
     logger = setup_logging(config["log_file"])
 
     processor = make_processor(config, logger)
@@ -93,5 +98,6 @@ def main():
     observer.join()
 
 
-if __name__ == "__main__":
+"""python main.py --config mi_configuracion.json"""
+if __name__ == "__main__": 
     main()
