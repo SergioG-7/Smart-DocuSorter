@@ -4,18 +4,18 @@ import os
 import sys
 import time
 import argparse
+import pystray
+from PIL import Image
 from src.classifier import classify
 from src.file_manager import move_and_rename
-from src.pdf_parser import extract_first_page_text
+from src.document_parser import extract_first_page_text
 from src.watcher import start_watching
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
-
 def load_config(path: str = CONFIG_PATH) -> dict:
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
-
 
 def setup_logging(log_file: str):
     log_dir = os.path.dirname(log_file)
@@ -39,10 +39,8 @@ def setup_logging(log_file: str):
 
     return logger
 
-#Devuelve la funcion callback que se ejecuta cada vez que el watcher detecta un PDF nuevo y estable.
+# Devuelve la funcion callback que se ejecuta cuando el watcher detecta un PDF nuevo y estable
 def make_processor(config: dict, logger: logging.Logger):
-
-
     def process_pdf(pdf_path: str):
         logger.info("Nuevo PDF detectado: %s", pdf_path)
 
@@ -64,9 +62,8 @@ def make_processor(config: dict, logger: logging.Logger):
 
     return process_pdf
 
-
 def main():
-    parser = argparse.ArgumentParser(description="Smart-DocuSorter: Clasificador automático de PDFs.")
+    parser = argparse.ArgumentParser(description="Smart-DocuSorter: Clasificador automático.")
     parser.add_argument(
         "--config", 
         default=CONFIG_PATH, 
@@ -76,7 +73,7 @@ def main():
 
     if not os.path.exists(args.config):
         print(f"Error: No se encontró el archivo de configuración en {args.config}")
-        print("Por favor, copia config.example.json como config.json y edítalo.")
+        print("Copia config.example.json como config.json y edítalo.")
         sys.exit(1)
 
     config = load_config(args.config)
@@ -85,16 +82,32 @@ def main():
     processor = make_processor(config, logger)
     observer = start_watching(config["watch_folder"], processor)
 
-    logger.info("Smart-DocuSorter iniciado. Ctrl+C para detener.")
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
+    logger.info("Smart-DocuSorter iniciado en la bandeja del sistema.")
+
+    # Se define dentro de main para poder acceder a la variable 'observer'
+    def exit_action(icon, item):
         logger.info("Deteniendo Smart-DocuSorter...")
         observer.stop()
+        icon.stop()
+
+    try:
+        image = Image.open("icono.png")
+    except FileNotFoundError:
+        print("Error: Necesitas un archivo 'icono.png' en la carpeta principal.")
+        observer.stop()
+        sys.exit(1)
+
+    menu = pystray.Menu(pystray.MenuItem("Salir", exit_action))
+    icon = pystray.Icon("DocuSorter", image, "Smart-DocuSorter", menu)
+    
+    try:
+        icon.run() # Mantiene el programa abierto en segundo plano
+    except KeyboardInterrupt:
+        logger.info("Cierre forzado desde consola...")
+        observer.stop()
+        
     observer.join()
 
-
-#python main.py --config mi_configuracion.json
+# Ejecución manual: python main.py --config mi_configuracion.json
 if __name__ == "__main__": 
     main()
