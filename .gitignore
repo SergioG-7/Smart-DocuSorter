@@ -26,3 +26,7 @@ Thumbs.db
 # Tu configuración local (¡Muy importante!)
 config.json
 /.env
+
+# Herramientas Claude Code (locales, no para el repo publico)
+.mcp.json
+.claude/

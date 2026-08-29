@@ -4,6 +4,7 @@
 import logging
 import os
 import time
+from collections import OrderedDict
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -12,10 +13,12 @@ logger = logging.getLogger("smart_docusorter")
 
 
 class DocumentHandler(FileSystemEventHandler):
+    _MAX_SEEN = 500
+
     def __init__(self, on_file_ready):
         super().__init__()
         self.on_file_ready = on_file_ready
-        self._seen = set()
+        self._seen = OrderedDict()
 
     def on_created(self, event):
         self._handle_event(event)
@@ -37,7 +40,9 @@ class DocumentHandler(FileSystemEventHandler):
         if not self._wait_until_stable(path):
             logger.warning("Archivo no estabilizado, se ignora: %s", path)
             return
-        self._seen.add(path)
+        self._seen[path] = True
+        if len(self._seen) > self._MAX_SEEN:
+            self._seen.popitem(last=False)
         self.on_file_ready(path)
 
     @staticmethod
