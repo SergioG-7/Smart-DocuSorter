@@ -112,3 +112,15 @@ Al no ser un daemon de Unix, en Windows dispones de dos opciones equivalentes:
 * Si mueves manualmente un archivo admitido a la carpeta vigilada mediante arrastrar y soltar (drag & drop), el monitor lo procesará de igual forma, ya que el sistema de eventos no distingue entre descargas finalizadas y traslados manuales.
 * Las imágenes con baja resolución, caligrafía ilegible o texto excesivamente borroso pueden generar fallos de lectura en el motor de Tesseract OCR, derivando el documento a `default_destination`.
 * El plan gratuito de la API de Gemini aplica límites por minuto/día; si se procesan decenas de archivos simultáneamente, las solicitudes excedentes se catalogarán temporalmente como `Sin_Clasificar`.
+
+---
+
+## Tests y CI
+
+El proyecto incluye pruebas unitarias en `tests/` (pytest) para la lógica de renombrado, movimiento y resolución de colisiones de archivos.
+
+```powershell
+python -m pytest -v
+```
+
+Cada push o pull request a `main`/`master` ejecuta estas pruebas automáticamente mediante GitHub Actions (`.github/workflows/ci.yml`).
